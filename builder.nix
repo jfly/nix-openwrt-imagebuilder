@@ -61,7 +61,10 @@ stdenv.mkDerivation {
     patchShebangs scripts staging_dir/host/bin
     substituteInPlace rules.mk \
       --replace "SHELL:=/usr/bin/env bash" "SHELL:=${runtimeShell}"
-    grep -r usr/bin/env
+    substituteInPlace rules.mk \
+      --replace "/usr/bin/env true" "${coreutils}/bin/true"
+    substituteInPlace rules.mk \
+      --replace "/usr/bin/env false" "${coreutils}/bin/false"
   '';
 
   configurePhase =
@@ -86,7 +89,7 @@ stdenv.mkDerivation {
     [
       zlib unzip bzip2
       ncurses which rsync git file getopt wget
-      bash perl python3
+      bash perl python3 dtc
     ] ++
     lib.optional (!lib.versionAtLeast release "21") python2;
 
