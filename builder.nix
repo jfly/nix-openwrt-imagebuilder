@@ -23,6 +23,8 @@
   ).packages.${packagesArch}
 # Extra OpenWRT packages (can be prefixed with "-")
 , packages ? []
+# TODO: <<< explain >>>
+, hackExtraPackages ? []
 # Include extra files
 , files ? null
 # Which services in /etc/init.d/ should be disabled
@@ -98,6 +100,9 @@ pkgs.stdenv.mkDerivation {
           ln -s $file $(basename $file)
         done
       fi
+    '' + lib.optionalString (files != null) ''
+        # copy files to avoid making etc read-only
+        cp -r --no-preserve=all ${files} files
     '';
 
   nativeBuildInputs = with pkgs; [
@@ -110,7 +115,7 @@ pkgs.stdenv.mkDerivation {
     makeArgs = lib.concatStringsSep " " [
       "-j$NIX_BUILD_CORES"
       "DISABLED_SERVICES='${lib.concatStringsSep " " disabledServices}'"
-      "PACKAGES='${lib.concatStringsSep " " packages}'"
+      "PACKAGES='${lib.concatStringsSep " " (packages ++ hackExtraPackages)}'"
       "PROFILE='${profile}'"
       "SHELL='${pkgs.runtimeShell}'"
       (lib.optionalString (files != null) "FILES='./files'")
@@ -121,9 +126,6 @@ pkgs.stdenv.mkDerivation {
   in lib.optionalString (lib.versionOlder release "19") ''
     # Hack around broken check for gcc
     touch staging_dir/host/.prereq-build
-  '' + lib.optionalString (files != null) ''
-      # copy files to avoid making etc read-only
-      cp -r --no-preserve=all ${files} files
   '' + ''
     make image ${makeArgs}
   '';
